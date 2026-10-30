@@ -1,3 +1,4 @@
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -24,6 +25,7 @@ android {
                 "proguard-rules.pro"
             )
         }
+
         debug {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
@@ -34,9 +36,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
-    }
+
     packaging {
         resources.excludes += setOf(
             "META-INF/AL2.0",
@@ -46,12 +46,19 @@ android {
     }
 }
 
+kotlin {
+    compilerOptions {
+        jvmTarget.set(
+            org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+        )
+    }
+}
+
 dependencies {
     implementation("androidx.core:core-ktx:1.17.0")
     implementation("androidx.documentfile:documentfile:1.1.0")
     implementation("androidx.webkit:webkit:1.14.0")
 
-    // Termux's terminal-view brings the terminal-emulator and its PTY JNI backend.
-    // Only the terminal-view / terminal-emulator libraries are used, not the Termux app shell.
+    // Native terminal emulator and PTY backend
     implementation("com.termux.termux-app:terminal-view:0.118.0")
 }
