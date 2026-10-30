@@ -1,9 +1,13 @@
+
 name: Build VYRON APK
 
 on:
   workflow_dispatch:
+
   push:
-    branches: [ main, master ]
+    branches:
+      - main
+      - master
     paths:
       - 'app/**'
       - '*.gradle.kts'
@@ -14,36 +18,64 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: vyron-android-build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
+    name: Build Android APK
     runs-on: ubuntu-latest
+    timeout-minutes: 45
+
     steps:
-      - name: Checkout
+      # 1. Download source code
+      - name: Checkout source
         uses: actions/checkout@v4
 
+      # 2. Configure Java
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
+      # 3. Configure Android SDK
+      # Automatically accepts Android SDK licenses.
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
+        with:
+          cmdline-tools-version: '15859902'
+          accept-android-sdk-licenses: true
+          log-accepted-android-sdk-licenses: false
+          packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
 
-      - name: Install Android SDK packages
-        run: |
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'platform-tools'
-
-      - name: Set up Gradle 8.13
+      # 4. Configure Gradle and caching
+      - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.13'
+          cache-cleanup: on-success
 
-      - name: Build debug and release variants
-        run: gradle --no-daemon clean :app:assembleDebug :app:assembleRelease
+      # 5. Verify build environment
+      - name: Check build environment
+        run: |
+          java -version
+          gradle --version
+          sdkmanager --version
 
-      - name: Upload installable debug APK
+      # 6. Build debug APK
+      - name: Build Debug APK
+        run: |
+          gradle --no-daemon clean :app:assembleDebug
+
+      # 7. Build release APK
+      - name: Build Release APK
+        run: |
+          gradle --no-daemon :app:assembleRelease
+
+      # 8. Upload installable debug APK
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
           name: VYRON-IDE-debug-apk
@@ -51,7 +83,8 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Upload unsigned release APK
+      # 9. Upload release APK
+      - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
           name: VYRON-IDE-release-unsigned
